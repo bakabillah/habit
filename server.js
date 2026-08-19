@@ -36,6 +36,24 @@ function getPastNDays(n = 7, offsetDays = 0) {
     return dates;
 }
 
+/**
+ * Helper: Ensure userId exists in users table to prevent Foreign Key Constraint errors
+ */
+async function ensureValidUserId(reqUserId) {
+    let userId = parseInt(reqUserId, 10) || 1;
+    const existingUser = await dbGet('SELECT user_id FROM users WHERE user_id = ?', [userId]);
+    if (existingUser) return userId;
+
+    const firstUser = await dbGet('SELECT user_id FROM users ORDER BY user_id ASC LIMIT 1');
+    if (firstUser) return firstUser.user_id;
+
+    const newUserResult = await dbRun(
+        'INSERT INTO users (name, email, password, points, streak_freezes) VALUES (?, ?, ?, 0, 2)',
+        ['Default Student', 'student@university.edu', 'academic2026']
+    );
+    return newUserResult.lastID;
+}
+
 function getGamificationData(user, habitsWithStreaks, completionRate) {
     const points = user ? (user.points || 0) : 0;
     const level = Math.floor(points / 100) + 1;
@@ -153,7 +171,7 @@ app.post('/api/auth/profile', async (req, res, next) => {
 app.post('/api/ai/assistant', async (req, res, next) => {
     try {
         const { prompt, user_id } = req.body;
-        const userId = parseInt(user_id, 10) || 1;
+        const userId = await ensureValidUserId(user_id);
         const today = getTodayDateString();
 
         if (!prompt || !prompt.trim()) {
@@ -200,7 +218,6 @@ app.post('/api/ai/assistant', async (req, res, next) => {
                 priority = 'Medium';
                 time = '07:30';
             } else {
-                // Extract clean text after "create" or "add"
                 const cleaned = prompt.replace(/(create|add|make|habit|new habit|for me|a|an)/gi, '').trim();
                 if (cleaned.length > 2) {
                     habitName = cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
@@ -272,7 +289,7 @@ app.get('/api/leaderboard', async (req, res, next) => {
 
 app.get('/api/dashboard', async (req, res, next) => {
     try {
-        const userId = parseInt(req.query.user_id, 10) || 1;
+        const userId = await ensureValidUserId(req.query.user_id);
         const offset = parseInt(req.query.offset, 10) || 0;
         const today = getTodayDateString();
         const past7Days = getPastNDays(7, offset);
@@ -395,7 +412,7 @@ app.get('/api/dashboard', async (req, res, next) => {
 app.post('/api/habits', async (req, res, next) => {
     try {
         const { habit_name, reminder_time, category, priority, target_days, target_quantity, subtasks, user_id } = req.body;
-        const userId = parseInt(user_id, 10) || 1;
+        const userId = await ensureValidUserId(user_id);
         const today = getTodayDateString();
 
         if (!habit_name || !habit_name.trim()) {
@@ -463,7 +480,7 @@ app.post('/api/habits/:id/log', async (req, res, next) => {
 
 app.get('/api/export/pdf', async (req, res, next) => {
     try {
-        const userId = parseInt(req.query.user_id, 10) || 1;
+        const userId = await ensureValidUserId(req.query.user_id);
         const user = await dbGet('SELECT name, email, points FROM users WHERE user_id = ?', [userId]);
 
         const habits = await dbQuery(
@@ -530,7 +547,7 @@ app.get('/api/export/pdf', async (req, res, next) => {
 
 app.get('/api/export/csv', async (req, res, next) => {
     try {
-        const userId = parseInt(req.query.user_id, 10) || 1;
+        const userId = await ensureValidUserId(req.query.user_id);
         const user = await dbGet('SELECT name FROM users WHERE user_id = ?', [userId]);
 
         const rows = await dbQuery(
