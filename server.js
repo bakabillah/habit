@@ -454,20 +454,24 @@ app.use((err, req, res, next) => {
     });
 });
 
-// Start Server and Initialize DB & Agent
+// Auto initialize database & recalculate streaks
 initDb()
     .then(async () => {
         await habitAgent.recalculateAllStreaks();
-        habitAgent.startBackgroundWorker();
-
-        app.listen(PORT, () => {
-            console.log(`====================================================`);
-            console.log(`🚀 Smart Habit Tracking System (SAD MVP) Server`);
-            console.log(`Running on: http://localhost:${PORT}`);
-            console.log(`====================================================`);
-        });
+        
+        // Start background worker & app.listen only when running locally (not on Vercel)
+        if (!process.env.VERCEL) {
+            habitAgent.startBackgroundWorker();
+            app.listen(PORT, () => {
+                console.log(`====================================================`);
+                console.log(`🚀 Smart Habit Tracking System (SAD MVP) Server`);
+                console.log(`Running on: http://localhost:${PORT}`);
+                console.log(`====================================================`);
+            });
+        }
     })
     .catch((err) => {
         console.error('[SERVER BOOT ERROR] Database initialization failed:', err);
-        process.exit(1);
     });
+
+module.exports = app;

@@ -2,7 +2,9 @@ const sqlite3 = require('sqlite3').verbose();
 const fs = require('fs');
 const path = require('path');
 
-const DB_PATH = path.join(__dirname, 'habits.db');
+// On Vercel serverless environment, local filesystem is read-only, use /tmp for SQLite
+const isVercel = process.env.VERCEL || process.env.NODE_ENV === 'production';
+const DB_PATH = isVercel ? '/tmp/habits.db' : path.join(__dirname, 'habits.db');
 const SCHEMA_PATH = path.join(__dirname, 'schema.sql');
 
 // Initialize database instance
@@ -11,7 +13,6 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
         console.error('[DATABASE ERROR] Failed to connect to SQLite database:', err.message);
     } else {
         console.log('[DATABASE] Connected to SQLite database at:', DB_PATH);
-        // Enable Foreign Keys in SQLite
         db.run('PRAGMA foreign_keys = ON;', (pragmaErr) => {
             if (pragmaErr) {
                 console.error('[DATABASE ERROR] Failed to enable PRAGMA foreign_keys:', pragmaErr.message);
@@ -67,7 +68,6 @@ function dbGet(sql, params = []) {
 
 /**
  * Helper: Run INSERT, UPDATE, DELETE statements
- * Returns object containing lastID and changes count
  */
 function dbRun(sql, params = []) {
     return new Promise((resolve, reject) => {

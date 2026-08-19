@@ -1,18 +1,19 @@
 {
-  "name": "sad-project",
+  "name": "smart-habit-tracking-system",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Smart Habit Tracking System MVP for SAD Course",
+  "main": "server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node server.js",
+    "dev": "node server.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "sqlite3": "^6.0.1"
+    "cors": "^2.8.5",
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
   }
 }
