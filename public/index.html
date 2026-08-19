@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Habit Tracking System | SAD Course MVP</title>
+    <!-- Google Fonts: Inter font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <!-- Academic Header -->
+    <header class="app-header">
+        <div class="header-container">
+            <div class="brand">
+                <span class="badge-academic">SAD-2026</span>
+                <h1>Smart Habit Tracking System</h1>
+            </div>
+            <!-- User Badge (Hidden on Auth View, Visible when Logged In) -->
+            <div class="user-badge hidden" id="user-badge">
+                <div class="avatar" id="user-avatar">AM</div>
+                <div class="user-info">
+                    <span class="user-name" id="user-name">Alex Mercer</span>
+                    <span class="user-role" id="user-email">alex.mercer@university.edu</span>
+                </div>
+                <button id="btn-logout" class="btn btn-sm btn-logout" title="Sign out of system">
+                    🚪 Logout
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="main-container">
+
+        <!-- ========================================== -->
+        <!-- VIEW 1: AUTHENTICATION / LOGIN HOMEPAGE    -->
+        <!-- ========================================== -->
+        <section id="auth-view" class="auth-container">
+            <div class="auth-card">
+                <div class="auth-header">
+                    <span class="badge-academic">Portal Access</span>
+                    <h2>Student & System Login</h2>
+                    <p>Enter your credentials to access your Smart Habit Tracking System workspace.</p>
+                </div>
+
+                <!-- Auth Navigation Tabs -->
+                <div class="auth-tabs">
+                    <button class="auth-tab active" id="tab-login">Sign In</button>
+                    <button class="auth-tab" id="tab-register">Register New Account</button>
+                </div>
+
+                <!-- Error / Success Alert Box -->
+                <div id="auth-alert" class="auth-alert hidden"></div>
+
+                <!-- LOGIN FORM -->
+                <form id="form-login" class="auth-form">
+                    <div class="form-group">
+                        <label for="login-email">Email Address</label>
+                        <input type="email" id="login-email" placeholder="student@university.edu" value="alex.mercer@university.edu" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Password</label>
+                        <input type="password" id="login-password" placeholder="••••••••" value="academic2026" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span>Sign In to Dashboard →</span>
+                    </button>
+
+                    <div class="demo-credentials-box">
+                        <span class="demo-title">💡 Demo Accounts:</span>
+                        <code>billah@gmail.com / 123</code>
+                        <code>alex.mercer@university.edu / academic2026</code>
+                    </div>
+                </form>
+
+                <!-- REGISTER FORM -->
+                <form id="form-register" class="auth-form hidden">
+                    <div class="form-group">
+                        <label for="reg-name">Full Name</label>
+                        <input type="text" id="reg-name" placeholder="e.g. Jane Doe" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email Address</label>
+                        <input type="email" id="reg-email" placeholder="jane.doe@university.edu" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" placeholder="Create password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full">
+                        <span>Create Account & Log In →</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- ========================================== -->
+        <!-- VIEW 2: AUTHENTICATED SYSTEM DASHBOARD     -->
+        <!-- ========================================== -->
+        <div id="dashboard-view" class="dashboard-container hidden">
+
+            <!-- Real-time Metrics Section -->
+            <section class="metrics-section">
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Total Habits</span>
+                        <span class="metric-icon">📋</span>
+                    </div>
+                    <div class="metric-value" id="metric-total-habits">0</div>
+                    <div class="metric-subtext">Active habits registered</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Today's Completion</span>
+                        <span class="metric-icon">📊</span>
+                    </div>
+                    <div class="metric-value" id="metric-completion-rate">0%</div>
+                    <div class="progress-bar-container">
+                        <div class="progress-bar-fill" id="metric-progress-fill" style="width: 0%;"></div>
+                    </div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Best Active Streak</span>
+                        <span class="metric-icon">🔥</span>
+                    </div>
+                    <div class="metric-value" id="metric-best-streak">0 <span class="unit">days</span></div>
+                    <div class="metric-subtext" id="metric-best-streak-name">No active habits</div>
+                </div>
+
+                <div class="metric-card">
+                    <div class="metric-header">
+                        <span class="metric-title">Today's Logs</span>
+                        <span class="metric-icon">✅</span>
+                    </div>
+                    <div class="metric-value" id="metric-today-count">0/0</div>
+                    <div class="metric-subtext">Completed vs total today</div>
+                </div>
+            </section>
+
+            <!-- Full Width Workspace Layout -->
+            <div class="workspace-full">
+                
+                <!-- Create Habit Form Card -->
+                <section class="card form-card">
+                    <div class="card-header">
+                        <h2>Create New Habit</h2>
+                        <span class="card-hint">Define habit & HH:MM scheduled reminder</span>
+                    </div>
+                    <form id="add-habit-form" class="habit-form">
+                        <div class="form-group">
+                            <label for="habit-name">Habit Name</label>
+                            <input type="text" id="habit-name" placeholder="e.g., Read 30 mins, Exercise, Meditate" required>
+                        </div>
+                        <div class="form-group form-group-small">
+                            <label for="reminder-time">Reminder (HH:MM)</label>
+                            <input type="time" id="reminder-time" value="08:00" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary" id="btn-submit-habit">
+                            <span>+ Create Habit</span>
+                        </button>
+                    </form>
+                    <div id="form-error-msg" class="error-msg hidden"></div>
+                </section>
+
+                <!-- Habit Daily Matrix Card -->
+                <section class="card matrix-card">
+                    <div class="card-header">
+                        <div>
+                            <h2>Habit Tracking Grid</h2>
+                            <span class="card-hint">Toggle status to recalculate streaks | Use Action column to delete habits</span>
+                        </div>
+                        <div class="grid-legend">
+                            <span class="legend-item"><span class="dot dot-completed"></span> Completed</span>
+                            <span class="legend-item"><span class="dot dot-incomplete"></span> Incomplete</span>
+                            <span class="legend-item"><span class="dot dot-unmarked"></span> Pending</span>
+                        </div>
+                    </div>
+
+                    <!-- Habit Table / Matrix -->
+                    <div class="table-responsive">
+                        <table class="habit-table">
+                            <thead>
+                                <tr id="table-header-row">
+                                    <th class="col-habit">Habit Details</th>
+                                    <th class="col-streak">Streaks</th>
+                                    <th class="col-action">Action</th>
+                                    <!-- Dynamic Date Columns for past 7 days -->
+                                </tr>
+                            </thead>
+                            <tbody id="habit-table-body">
+                                <tr>
+                                    <td colspan="10" class="empty-state">Loading habits and progress data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+        </div>
+    </main>
+
+    <!-- Academic Footer -->
+    <footer class="app-footer">
+        <p>System Analysis & Design (SAD) Course Project &copy; 2026</p>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
