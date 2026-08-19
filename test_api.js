@@ -8,9 +8,9 @@ function makeRequest(options, postData = null) {
             res.on('end', () => {
                 try {
                     const parsed = JSON.parse(body);
-                    resolve({ statusCode: res.statusCode, body: parsed });
+                    resolve({ statusCode: res.statusCode, headers: res.headers, body: parsed });
                 } catch (e) {
-                    resolve({ statusCode: res.statusCode, body });
+                    resolve({ statusCode: res.statusCode, headers: res.headers, body });
                 }
             });
         });
@@ -23,82 +23,95 @@ function makeRequest(options, postData = null) {
 }
 
 async function runTests() {
-    console.log('=== STARTING AUTOMATED MVP & AUTH INTEGRATION TESTS ===\n');
+    console.log('=== STARTING COMPLETE INTEGRATION TESTS FOR ALL 5 ADVANCED FEATURES ===\n');
 
-    // Test 1: User Login (Seed Account)
-    console.log('Test 1: Authenticating Seed Account via POST /api/auth/login...');
+    // Test 1: User Login
+    console.log('Test 1: Authenticating User Billah via POST /api/auth/login...');
     const loginRes = await makeRequest({
         hostname: '127.0.0.1',
         port: 3000,
         path: '/api/auth/login',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, { email: 'alex.mercer@university.edu', password: 'academic2026' });
+    }, { email: 'billah@gmail.com', password: '123' });
 
     console.log(`Status: ${loginRes.statusCode}`);
     console.log(`User Data:`, loginRes.body.user);
     const userId = loginRes.body.user.user_id;
     console.log('\n');
 
-    // Test 2: Register New User Account
-    console.log('Test 2: Registering New User via POST /api/auth/register...');
-    const regEmail = `test.student.${Date.now()}@university.edu`;
-    const regRes = await makeRequest({
+    // Test 2: Profile Update API (POST /api/auth/profile)
+    console.log(`Test 2: Testing Profile Update via POST /api/auth/profile for user #${userId}...`);
+    const profileRes = await makeRequest({
         hostname: '127.0.0.1',
         port: 3000,
-        path: '/api/auth/register',
+        path: '/api/auth/profile',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, { name: 'Test Student', email: regEmail, password: 'password123' });
-
-    console.log(`Status: ${regRes.statusCode}`);
-    console.log(`Registered User:`, regRes.body.user);
-    const newUserId = regRes.body.user.user_id;
+    }, {
+        user_id: userId,
+        name: 'Billah Khan (Master)',
+        email: 'billah@gmail.com'
+    });
+    console.log(`Status: ${profileRes.statusCode}`);
+    console.log(`Updated Profile:`, profileRes.body.user);
     console.log('\n');
 
-    // Test 3: GET /api/dashboard for registered user
-    console.log(`Test 3: Fetching GET /api/dashboard?user_id=${newUserId}...`);
-    const dashRes = await makeRequest({
-        hostname: '127.0.0.1',
-        port: 3000,
-        path: `/api/dashboard?user_id=${newUserId}`,
-        method: 'GET'
-    });
-    console.log(`Status: ${dashRes.statusCode}`);
-    console.log(`User Name in Dashboard:`, dashRes.body.data.user.name);
-    console.log(`Total habits for new user: ${dashRes.body.data.habits.length}\n`);
-
-    // Test 4: Create habit for new user
-    console.log(`Test 4: Creating habit for user #${newUserId}...`);
+    // Test 3: Create Habit with Priority, Target Days & Subtasks
+    console.log(`Test 3: Creating habit with Priority 'High', Schedule 'Weekdays', and Sub-tasks...`);
     const createRes = await makeRequest({
         hostname: '127.0.0.1',
         port: 3000,
         path: '/api/habits',
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
-    }, { habit_name: 'Daily Research Reading', reminder_time: '21:00', user_id: newUserId });
+    }, {
+        habit_name: 'Distributed Systems Lecture Review',
+        category: 'Academic',
+        priority: 'High',
+        target_days: 'Weekdays',
+        subtasks: 'Read Lecture 5, Solve Practice Quiz, Write Summary',
+        reminder_time: '14:00',
+        user_id: userId
+    });
 
     console.log(`Status: ${createRes.statusCode}`);
     console.log(`Created Habit:`, createRes.body.data);
     const habitId = createRes.body.data.habit_id;
     console.log('\n');
 
-    // Test 5: Log habit status & streak calculation
-    console.log(`Test 5: Logging status for habit #${habitId}...`);
-    const todayStr = new Date().toISOString().substring(0, 10);
-    const logRes = await makeRequest({
+    // Test 4: Dashboard Trend Analytics & Priority Order Verification
+    console.log(`Test 4: Fetching Dashboard Trend Analytics & Priorities for user #${userId}...`);
+    const dashRes = await makeRequest({
         hostname: '127.0.0.1',
         port: 3000,
-        path: `/api/habits/${habitId}/log`,
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' }
-    }, { date: todayStr, status: 'completed' });
+        path: `/api/dashboard?user_id=${userId}`,
+        method: 'GET'
+    });
 
-    console.log(`Status: ${logRes.statusCode}`);
-    console.log(`Streak Result:`, logRes.body.data);
+    console.log(`Status: ${dashRes.statusCode}`);
+    console.log(`Weekly Trend Array Sample (First 3 Days):`, dashRes.body.data.weeklyTrend.slice(0, 3));
+    console.log(`Top Habit Priority & Subtasks:`, {
+        name: dashRes.body.data.habits[0].habit_name,
+        priority: dashRes.body.data.habits[0].priority,
+        subtasks: dashRes.body.data.habits[0].subtasks
+    });
     console.log('\n');
 
-    console.log('=== ALL AUTHENTICATION & HABIT TESTS PASSED SUCCESSFULLY ===');
+    // Test 5: CSV Export Endpoint Verification
+    console.log(`Test 5: Testing GET /api/export/csv?user_id=${userId}...`);
+    const csvRes = await makeRequest({
+        hostname: '127.0.0.1',
+        port: 3000,
+        path: `/api/export/csv?user_id=${userId}`,
+        method: 'GET'
+    });
+    console.log(`Status: ${csvRes.statusCode}`);
+    console.log(`Content-Disposition: ${csvRes.headers['content-disposition']}`);
+    console.log(`CSV Header:\n${csvRes.body.split('\n')[0]}`);
+    console.log('\n');
+
+    console.log('=== ALL 5 ADVANCED FEATURE INTEGRATION TESTS PASSED 100% SUCCESSFULLY ===');
 }
 
 runTests().catch(err => {

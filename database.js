@@ -22,24 +22,67 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 });
 
 /**
- * Execute SQL schema file to setup tables & initial seed data.
+ * Execute SQL schema file and run column migrations if needed.
  */
 function initDb() {
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
         if (!fs.existsSync(SCHEMA_PATH)) {
             return reject(new Error(`Schema file not found at ${SCHEMA_PATH}`));
         }
 
-        const sql = fs.readFileSync(SCHEMA_PATH, 'utf-8');
-        db.exec(sql, (err) => {
-            if (err) {
-                console.error('[DATABASE ERROR] Failed to initialize database schema:', err.message);
-                return reject(err);
-            }
-            console.log('[DATABASE] Database schema and seed data initialized successfully.');
-            resolve();
-        });
+        try {
+            // Run column migrations first on existing tables
+            await runMigrations();
+
+            const sql = fs.readFileSync(SCHEMA_PATH, 'utf-8');
+            db.exec(sql, (err) => {
+                if (err) {
+                    console.error('[DATABASE ERROR] Failed to initialize database schema:', err.message);
+                    return reject(err);
+                }
+                console.log('[DATABASE] Database schema, migrations, and seed data ready.');
+                resolve();
+            });
+        } catch (migErr) {
+            console.error('[DATABASE ERROR] Initialization failed:', migErr.message);
+            reject(migErr);
+        }
     });
+}
+
+/**
+ * Helper: Run ALTER TABLE migrations safely on existing tables
+ */
+async function runMigrations() {
+    // 1. Add points to users table if missing
+    try {
+        await dbRun("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0");
+    } catch (e) { /* Column already exists */ }
+
+    // 2. Add category to habits table if missing
+    try {
+        await dbRun("ALTER TABLE habits ADD COLUMN category TEXT DEFAULT 'General'");
+    } catch (e) { /* Column already exists */ }
+
+    // 3. Add priority to habits table if missing
+    try {
+        await dbRun("ALTER TABLE habits ADD COLUMN priority TEXT DEFAULT 'Medium'");
+    } catch (e) { /* Column already exists */ }
+
+    // 4. Add target_days to habits table if missing
+    try {
+        await dbRun("ALTER TABLE habits ADD COLUMN target_days TEXT DEFAULT 'All'");
+    } catch (e) { /* Column already exists */ }
+
+    // 5. Add subtasks to habits table if missing
+    try {
+        await dbRun("ALTER TABLE habits ADD COLUMN subtasks TEXT DEFAULT NULL");
+    } catch (e) { /* Column already exists */ }
+
+    // 6. Add notes to habit_log table if missing
+    try {
+        await dbRun("ALTER TABLE habit_log ADD COLUMN notes TEXT DEFAULT NULL");
+    } catch (e) { /* Column already exists */ }
 }
 
 /**

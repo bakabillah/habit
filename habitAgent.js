@@ -56,7 +56,6 @@ async function recalculateStreak(habitId) {
             return null;
         }
 
-        // Fetch all log records for this habit
         const logs = await dbQuery(
             'SELECT date, status FROM habit_log WHERE habit_id = ? ORDER BY date ASC',
             [habitId]
@@ -65,32 +64,10 @@ async function recalculateStreak(habitId) {
         const completedDates = new Set(
             logs.filter(l => l.status === 'completed').map(l => l.date)
         );
-        const incompleteDates = new Set(
-            logs.filter(l => l.status === 'incomplete').map(l => l.date)
-        );
 
-        const today = formatDate(new Date());
-        const yesterday = getOffsetDate(today, -1);
-
-        // 1. Calculate Current Streak
-        let currentStreak = 0;
-        let checkDate = null;
-
-        if (completedDates.has(today)) {
-            checkDate = today;
-        } else if (!incompleteDates.has(today) && completedDates.has(yesterday)) {
-            checkDate = yesterday;
-        }
-
-        if (checkDate) {
-            while (completedDates.has(checkDate)) {
-                currentStreak++;
-                checkDate = getOffsetDate(checkDate, -1);
-            }
-        }
-
-        // 2. Calculate Longest Streak in history
         const sortedCompletedDates = Array.from(completedDates).sort();
+
+        // 1. Calculate Longest Consecutive Streak in log history
         let longestStreak = 0;
         let runningStreak = 0;
         let prevDateStr = null;
@@ -110,6 +87,29 @@ async function recalculateStreak(habitId) {
                 longestStreak = runningStreak;
             }
             prevDateStr = dateStr;
+        }
+
+        // 2. Calculate Current Active Streak
+        const today = formatDate(new Date());
+        const yesterday = getOffsetDate(today, -1);
+
+        let currentStreak = 0;
+        let checkDate = null;
+
+        if (completedDates.has(today)) {
+            checkDate = today;
+        } else if (completedDates.has(yesterday)) {
+            checkDate = yesterday;
+        } else if (sortedCompletedDates.length > 0) {
+            const latestCompleted = sortedCompletedDates[sortedCompletedDates.length - 1];
+            checkDate = latestCompleted;
+        }
+
+        if (checkDate) {
+            while (completedDates.has(checkDate)) {
+                currentStreak++;
+                checkDate = getOffsetDate(checkDate, -1);
+            }
         }
 
         if (currentStreak > longestStreak) {
@@ -190,9 +190,6 @@ async function checkScheduledReminders() {
     }
 }
 
-/**
- * Start background worker running every minute
- */
 let workerIntervalId = null;
 
 function startBackgroundWorker() {
@@ -207,9 +204,6 @@ function startBackgroundWorker() {
     }, 60000);
 }
 
-/**
- * Fetch all agent logs for live terminal polling
- */
 function getAgentLogs() {
     return agentLogs;
 }
