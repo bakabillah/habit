@@ -1,7 +1,7 @@
 /**
  * Smart Habit Tracking System - Vanilla JS Frontend Application
  * System Analysis & Design (SAD) Course MVP
- * Features Login Homepage, Dark Mode, Gamification, Badges, Category Filters, Priority, Subtasks, Trend Chart, Historical Back Data Navigation & CSV Export
+ * Features Login Homepage, Dark Mode, Gamification, Badges, Category Filters, Priority, Subtasks, Trend Chart, Historical Back Data Navigation, Center Alert Modals, PWA Installation, Customizable Pomodoro Timer, Leaderboard, Real AI Habit Assistant & PDF Export
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -17,8 +17,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const userName = document.getElementById('user-name');
     const userEmail = document.getElementById('user-email');
     const btnOpenProfile = document.getElementById('btn-open-profile');
+    const btnExportPdf = document.getElementById('btn-export-pdf');
     const btnExportCsv = document.getElementById('btn-export-csv');
     const btnLogout = document.getElementById('btn-logout');
+    const btnInstallPwa = document.getElementById('btn-install-pwa');
 
     // Auth Elements
     const tabLogin = document.getElementById('tab-login');
@@ -26,6 +28,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const formLogin = document.getElementById('form-login');
     const formRegister = document.getElementById('form-register');
     const authAlert = document.getElementById('auth-alert');
+
+    // Real AI Assistant Elements
+    const formAiChat = document.getElementById('form-ai-chat');
+    const aiChatInput = document.getElementById('ai-chat-input');
+    const aiChatBox = document.getElementById('ai-chat-box');
 
     // Dashboard Form Elements
     const formAddHabit = document.getElementById('add-habit-form');
@@ -52,12 +59,22 @@ document.addEventListener('DOMContentLoaded', () => {
     const metricProgressFill = document.getElementById('metric-progress-fill');
     const metricBestStreak = document.getElementById('metric-best-streak');
     const metricBestStreakName = document.getElementById('metric-best-streak-name');
-    const metricTodayCount = document.getElementById('metric-today-count');
+    const metricFreezePasses = document.getElementById('metric-freeze-passes');
 
     const userLevelBadge = document.getElementById('user-level-badge');
     const userXpText = document.getElementById('user-xp-text');
     const xpProgressFill = document.getElementById('xp-progress-fill');
     const badgesContainer = document.getElementById('badges-container');
+
+    // Pomodoro Timer Elements
+    const pomodoroTimerDisplay = document.getElementById('pomodoro-timer');
+    const btnPomoStart = document.getElementById('btn-pomo-start');
+    const btnPomoPause = document.getElementById('btn-pomo-pause');
+    const btnPomoReset = document.getElementById('btn-pomo-reset');
+    const pomoCustomInput = document.getElementById('pomo-custom-input');
+
+    // Leaderboard Container
+    const leaderboardList = document.getElementById('leaderboard-list');
 
     // Profile Modal Elements
     const profileModal = document.getElementById('profile-modal');
@@ -68,19 +85,35 @@ document.addEventListener('DOMContentLoaded', () => {
     const profilePassword = document.getElementById('profile-password');
     const profileAlert = document.getElementById('profile-alert');
 
+    // Action Alert Modal Elements
+    const actionModal = document.getElementById('action-modal');
+    const actionModalIcon = document.getElementById('action-modal-icon');
+    const actionModalTitle = document.getElementById('action-modal-title');
+    const actionModalMessage = document.getElementById('action-modal-message');
+    const btnCloseActionModal = document.getElementById('btn-close-action-modal');
+
     // State Variables
     let currentUser = null;
     let currentPast7Days = [];
     let habitsData = [];
     let activeCategoryFilter = 'All';
-    let dateOffsetDays = 0; // 0 = current week ending today, 7 = 1 week ago, 14 = 2 weeks ago...
+    let dateOffsetDays = 0;
     let pollingMetricsInterval = null;
+    let deferredPwaPrompt = null;
+
+    // Pomodoro State
+    let pomoSelectedMinutes = 25;
+    let pomoSecondsRemaining = 25 * 60;
+    let pomoInterval = null;
 
     // Init App
     init();
 
     function init() {
         initTheme();
+        initPWA();
+        initPomodoro();
+        initAIChat();
 
         const savedUser = localStorage.getItem('currentUser');
         if (savedUser) {
@@ -101,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnCloseProfileModal.addEventListener('click', closeProfileModal);
         profileForm.addEventListener('submit', handleProfileUpdate);
 
-        // Date Navigation Event Listeners for Historical Back Data
+        // Date Navigation Event Listeners
         btnPrevWeek.addEventListener('click', () => {
             dateOffsetDays += 7;
             fetchDashboardData();
@@ -124,6 +157,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formRegister.addEventListener('submit', handleRegister);
         btnLogout.addEventListener('click', handleLogout);
         btnExportCsv.addEventListener('click', handleExportCsv);
+        if (btnExportPdf) btnExportPdf.addEventListener('click', handleExportPdf);
 
         // Dashboard Event Listeners
         formAddHabit.addEventListener('submit', handleAddHabit);
@@ -131,7 +165,234 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // THEME MANAGEMENT (DARK / LIGHT MODE)
+    // REAL AI ASSISTANT CHAT ENGINE
+    // ==========================================
+
+    function initAIChat() {
+        if (formAiChat) {
+            formAiChat.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const prompt = aiChatInput.value.trim();
+                if (!prompt) return;
+                aiChatInput.value = '';
+                await sendAiPrompt(prompt);
+            });
+        }
+
+        // Attach listeners directly to chips and container
+        const attachChipListeners = () => {
+            const chips = document.querySelectorAll('.ai-chip');
+            chips.forEach(chip => {
+                chip.onclick = async (e) => {
+                    e.preventDefault();
+                    const prompt = chip.getAttribute('data-prompt');
+                    if (prompt) await sendAiPrompt(prompt);
+                };
+            });
+        };
+
+        attachChipListeners();
+    }
+
+    async function sendAiPrompt(promptText) {
+        const userId = currentUser ? currentUser.user_id : 1;
+
+        // Render User Message in AI Chat Window
+        if (aiChatBox) {
+            const userMsgDiv = document.createElement('div');
+            userMsgDiv.style.cssText = 'color:#a5b4fc; text-align:right; font-weight:600; font-size:0.85rem;';
+            userMsgDiv.innerHTML = `👤 You: ${escapeHtml(promptText)}`;
+            aiChatBox.appendChild(userMsgDiv);
+            aiChatBox.scrollTop = aiChatBox.scrollHeight;
+        }
+
+        try {
+            const res = await fetch('/api/ai/assistant', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ prompt: promptText, user_id: userId })
+            });
+
+            const result = await res.json();
+            if (result.success && result.reply) {
+                if (aiChatBox) {
+                    const aiMsgDiv = document.createElement('div');
+                    aiMsgDiv.style.cssText = 'color:#e0e7ff; line-height:1.4; white-space:pre-line; font-size:0.85rem;';
+                    aiMsgDiv.innerHTML = result.reply;
+                    aiChatBox.appendChild(aiMsgDiv);
+                    aiChatBox.scrollTop = aiChatBox.scrollHeight;
+                }
+
+                if (result.created) {
+                    showProminentAlert(
+                        'AI Auto-Created Habit! 🤖',
+                        `Your AI Assistant has automatically created and added "${result.habit.habit_name}" to your grid!`,
+                        '🎉'
+                    );
+                    await fetchDashboardData();
+                }
+            }
+        } catch (err) {
+            console.error('AI Assistant Error:', err);
+        }
+    }
+
+    // ==========================================
+    // CUSTOMIZABLE POMODORO FOCUS TIMER
+    // ==========================================
+
+    function initPomodoro() {
+        if (!pomodoroTimerDisplay) return;
+
+        updatePomodoroDisplay();
+
+        // Time selector buttons (15m, 25m, 45m, 60m)
+        const timeBtns = document.querySelectorAll('.btn-pomo-time');
+        timeBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                timeBtns.forEach(b => {
+                    b.style.background = 'var(--bg-main)';
+                    b.style.color = 'var(--text-secondary)';
+                    b.style.fontWeight = '400';
+                });
+                btn.style.background = 'var(--accent-blue-light)';
+                btn.style.color = 'var(--accent-blue)';
+                btn.style.fontWeight = '700';
+
+                const mins = parseInt(btn.getAttribute('data-mins'), 10) || 25;
+                setPomodoroDuration(mins);
+            });
+        });
+
+        // Custom duration input
+        if (pomoCustomInput) {
+            pomoCustomInput.addEventListener('input', () => {
+                const mins = parseInt(pomoCustomInput.value, 10);
+                if (mins && mins > 0 && mins <= 180) {
+                    timeBtns.forEach(b => {
+                        b.style.background = 'var(--bg-main)';
+                        b.style.color = 'var(--text-secondary)';
+                        b.style.fontWeight = '400';
+                    });
+                    setPomodoroDuration(mins);
+                }
+            });
+        }
+
+        btnPomoStart.addEventListener('click', () => {
+            if (pomoInterval) return;
+            pomoInterval = setInterval(() => {
+                if (pomoSecondsRemaining > 0) {
+                    pomoSecondsRemaining--;
+                    updatePomodoroDisplay();
+                } else {
+                    clearInterval(pomoInterval);
+                    pomoInterval = null;
+                    playAudioChime();
+                    showProminentAlert('Focus Session Complete! 🎯', `Great job completing your ${pomoSelectedMinutes}-minute focus session! Take a 5-minute break.`, '🎉');
+                }
+            }, 1000);
+        });
+
+        btnPomoPause.addEventListener('click', () => {
+            if (pomoInterval) {
+                clearInterval(pomoInterval);
+                pomoInterval = null;
+            }
+        });
+
+        btnPomoReset.addEventListener('click', () => {
+            if (pomoInterval) {
+                clearInterval(pomoInterval);
+                pomoInterval = null;
+            }
+            setPomodoroDuration(pomoSelectedMinutes);
+        });
+    }
+
+    function setPomodoroDuration(mins) {
+        if (pomoInterval) {
+            clearInterval(pomoInterval);
+            pomoInterval = null;
+        }
+        pomoSelectedMinutes = mins;
+        pomoSecondsRemaining = mins * 60;
+        updatePomodoroDisplay();
+    }
+
+    function updatePomodoroDisplay() {
+        const m = String(Math.floor(pomoSecondsRemaining / 60)).padStart(2, '0');
+        const s = String(pomoSecondsRemaining % 60).padStart(2, '0');
+        if (pomodoroTimerDisplay) pomodoroTimerDisplay.textContent = `${m}:${s}`;
+    }
+
+    function playAudioChime() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+            gain.gain.setValueAtTime(0.3, ctx.currentTime);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start();
+            osc.stop(ctx.currentTime + 0.8);
+        } catch (e) {}
+    }
+
+    // ==========================================
+    // PWA SERVICE WORKER & INSTALLATION
+    // ==========================================
+
+    function initPWA() {
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(err => console.log('SW registration error:', err));
+        }
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPwaPrompt = e;
+            if (btnInstallPwa) btnInstallPwa.classList.remove('hidden');
+        });
+
+        if (btnInstallPwa) {
+            btnInstallPwa.addEventListener('click', async () => {
+                if (deferredPwaPrompt) {
+                    deferredPwaPrompt.prompt();
+                    const { outcome } = await deferredPwaPrompt.userChoice;
+                    if (outcome === 'accepted') {
+                        btnInstallPwa.classList.add('hidden');
+                    }
+                    deferredPwaPrompt = null;
+                }
+            });
+        }
+    }
+
+    // ==========================================
+    // PROMINENT CENTER ACTION ALERT MODAL
+    // ==========================================
+
+    function showProminentAlert(title, message, icon = '✅') {
+        if (!actionModal) return;
+
+        actionModalIcon.textContent = icon;
+        actionModalTitle.textContent = title;
+        actionModalMessage.textContent = message;
+        actionModal.classList.remove('hidden');
+
+        const handleClose = () => {
+            actionModal.classList.add('hidden');
+            btnCloseActionModal.removeEventListener('click', handleClose);
+        };
+
+        btnCloseActionModal.onclick = handleClose;
+    }
+
+    // ==========================================
+    // THEME MANAGEMENT
     // ==========================================
 
     function initTheme() {
@@ -152,7 +413,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // AUTHENTICATION & PROFILE MANAGEMENT
+    // AUTHENTICATION & PROFILE
     // ==========================================
 
     function switchAuthTab(tab) {
@@ -258,6 +519,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         updateUserHeader();
         fetchDashboardData();
+        fetchLeaderboard();
 
         if (pollingMetricsInterval) clearInterval(pollingMetricsInterval);
         pollingMetricsInterval = setInterval(fetchDashboardData, 10000);
@@ -311,6 +573,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStorage.setItem('currentUser', JSON.stringify(currentUser));
                 updateUserHeader();
                 closeProfileModal();
+                showProminentAlert('Profile Updated! 👤', 'Your user profile details have been saved.', '✅');
                 await fetchDashboardData();
             } else {
                 profileAlert.textContent = result.error || 'Failed to update profile.';
@@ -326,8 +589,13 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function handleExportCsv() {
-        if (!currentUser) return;
-        window.location.href = `/api/export/csv?user_id=${currentUser.user_id}`;
+        const userId = currentUser ? currentUser.user_id : 1;
+        window.location.href = `/api/export/csv?user_id=${userId}`;
+    }
+
+    function handleExportPdf() {
+        const userId = currentUser ? currentUser.user_id : 1;
+        window.open(`/api/export/pdf?user_id=${userId}`, '_blank');
     }
 
     // ==========================================
@@ -347,14 +615,14 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ==========================================
-    // DASHBOARD & ANALYTICS RENDERERS
+    // DASHBOARD & LEADERBOARD RENDERERS
     // ==========================================
 
     async function fetchDashboardData() {
-        if (!currentUser) return;
+        const userId = currentUser ? currentUser.user_id : 1;
 
         try {
-            const res = await fetch(`/api/dashboard?user_id=${currentUser.user_id}&offset=${dateOffsetDays}`);
+            const res = await fetch(`/api/dashboard?user_id=${userId}&offset=${dateOffsetDays}`);
             const result = await res.json();
 
             if (!result.success) {
@@ -362,14 +630,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
-            const { past7Days, metrics, weeklyTrend, gamification, habits } = result.data;
+            const { past7Days, metrics, weeklyTrend, gamification, user, habits } = result.data;
             currentPast7Days = past7Days;
             habitsData = habits;
 
-            // Enable/disable next week button if at current week
             if (btnNextWeek) {
                 btnNextWeek.style.opacity = (dateOffsetDays === 0) ? '0.4' : '1';
             }
+
+            if (metricFreezePasses && user) metricFreezePasses.innerHTML = `${user.streak_freezes || 2} <span class="unit">passes</span>`;
 
             updateMetricsUI(metrics);
             renderWeeklyTrend(weeklyTrend);
@@ -382,6 +651,34 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    async function fetchLeaderboard() {
+        if (!leaderboardList) return;
+        try {
+            const res = await fetch('/api/leaderboard');
+            const result = await res.json();
+            if (result.success && result.data) {
+                leaderboardList.innerHTML = '';
+                result.data.forEach(item => {
+                    const row = document.createElement('div');
+                    row.style.cssText = 'display:flex; justify-content:space-between; align-items:center; padding:0.4rem 0.75rem; background:var(--bg-main); border:1px solid var(--border-color); border-radius:6px; font-size:0.85rem;';
+                    
+                    const rankColor = item.rank === 1 ? '🥇' : (item.rank === 2 ? '🥈' : (item.rank === 3 ? '🥉' : `#${item.rank}`));
+                    row.innerHTML = `
+                        <div>
+                            <strong>${rankColor} ${escapeHtml(item.name)}</strong>
+                            <span style="font-size:0.75rem; color:var(--text-secondary); display:block;">Level ${item.level} Student</span>
+                        </div>
+                        <div style="text-align:right;">
+                            <span style="font-weight:700; color:var(--accent-blue);">${item.points} XP</span>
+                            <span style="font-size:0.75rem; color:var(--streak-amber); display:block;">🔥 ${item.best_streak}d streak</span>
+                        </div>
+                    `;
+                    leaderboardList.appendChild(row);
+                });
+            }
+        } catch (e) { console.error('Leaderboard error:', e); }
+    }
+
     function updateMetricsUI(metrics) {
         metricTotalHabits.textContent = metrics.totalHabits;
         metricCompletionRate.textContent = `${metrics.completionRate}%`;
@@ -391,8 +688,6 @@ document.addEventListener('DOMContentLoaded', () => {
         metricBestStreakName.textContent = metrics.bestActiveStreak.habit_name !== 'N/A'
             ? `Habit: "${metrics.bestActiveStreak.habit_name}"`
             : 'No active habits';
-
-        metricTodayCount.textContent = `${metrics.todayCompletedCount}/${metrics.totalHabits}`;
     }
 
     function renderWeeklyTrend(weeklyTrend) {
@@ -471,7 +766,7 @@ document.addEventListener('DOMContentLoaded', () => {
             habitTableBody.innerHTML = `
                 <tr>
                     <td colspan="${5 + past7Days.length}" class="empty-state">
-                        ${habits.length === 0 ? 'No habits configured yet. Create a habit above!' : `No habits found in category "${activeCategoryFilter}".`}
+                        ${habits.length === 0 ? 'No habits configured yet. Create a habit above or ask AI Assistant!' : `No habits found in category "${activeCategoryFilter}".`}
                     </td>
                 </tr>
             `;
@@ -483,7 +778,6 @@ document.addEventListener('DOMContentLoaded', () => {
         filteredHabits.forEach(habit => {
             const tr = document.createElement('tr');
 
-            // 1. Habit Details Cell & Subtasks Checklist
             const tdInfo = document.createElement('td');
             tdInfo.className = 'col-habit';
 
@@ -510,7 +804,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             tr.appendChild(tdInfo);
 
-            // 2. Priority Cell
             const tdPriority = document.createElement('td');
             tdPriority.className = 'col-priority';
             const priorityClass = `badge-priority-${(habit.priority || 'Medium').toLowerCase()}`;
@@ -518,13 +811,11 @@ document.addEventListener('DOMContentLoaded', () => {
             tdPriority.innerHTML = `<span class="badge-priority ${priorityClass}">${priorityIcon} ${habit.priority || 'Medium'}</span>`;
             tr.appendChild(tdPriority);
 
-            // 3. Category Tag Cell
             const tdCategory = document.createElement('td');
             tdCategory.className = 'col-category';
             tdCategory.innerHTML = `<span class="tag-category">${escapeHtml(habit.category || 'General')}</span>`;
             tr.appendChild(tdCategory);
 
-            // 4. Streaks Cell
             const tdStreak = document.createElement('td');
             tdStreak.className = 'col-streak';
             tdStreak.innerHTML = `
@@ -539,7 +830,6 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
             tr.appendChild(tdStreak);
 
-            // 5. Action Delete Cell
             const tdAction = document.createElement('td');
             tdAction.className = 'col-action cell-action';
             
@@ -552,7 +842,6 @@ document.addEventListener('DOMContentLoaded', () => {
             tdAction.appendChild(btnDelete);
             tr.appendChild(tdAction);
 
-            // 6. Past 7 Days Cells with Instant Toggle Buttons
             habit.weekly_logs.forEach(logItem => {
                 const tdDay = document.createElement('td');
                 tdDay.className = 'cell-day';
@@ -602,6 +891,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await res.json();
             if (result.success) {
                 await fetchDashboardData();
+                await fetchLeaderboard();
             } else {
                 alert(`Error updating log: ${result.error}`);
             }
@@ -614,8 +904,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         formErrorMsg.classList.add('hidden');
 
-        if (!currentUser) return;
-
+        const userId = currentUser ? currentUser.user_id : 1;
         const habit_name = inputHabitName.value.trim();
         const category = selectHabitCategory.value;
         const priority = selectHabitPriority.value;
@@ -636,7 +925,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     priority,
                     target_days,
                     subtasks,
-                    user_id: currentUser.user_id 
+                    user_id: userId
                 })
             });
 
@@ -645,6 +934,11 @@ document.addEventListener('DOMContentLoaded', () => {
             if (result.success) {
                 inputHabitName.value = '';
                 inputHabitSubtasks.value = '';
+                showProminentAlert(
+                    'Habit Created Successfully! 🎉',
+                    `Your new habit "${habit_name}" has been created and added to your tracking grid.`,
+                    '✅'
+                );
                 await fetchDashboardData();
             } else {
                 formErrorMsg.textContent = result.error || result.details || 'Failed to create habit.';
@@ -667,6 +961,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const result = await res.json();
 
             if (result.success) {
+                showProminentAlert(
+                    'Habit Deleted 🗑️',
+                    `The habit "${habitName}" has been permanently deleted from your workspace.`,
+                    '🗑️'
+                );
                 await fetchDashboardData();
             } else {
                 alert(`Failed to delete habit: ${result.error}`);

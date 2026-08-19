@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Habit Tracking System | SAD Course MVP</title>
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#2563eb">
     <!-- Google Fonts: Inter font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,6 +24,10 @@
             </div>
             <!-- User Badge & Actions -->
             <div class="user-badge-container">
+                <!-- PWA Install Button -->
+                <button id="btn-install-pwa" class="btn btn-sm btn-icon hidden" title="Install App on Phone / Desktop Home Screen">
+                    📲 Install App
+                </button>
                 <!-- Theme Toggle Button -->
                 <button id="btn-theme-toggle" class="btn btn-sm btn-icon" title="Toggle Light / Dark Mode">
                     🌓 <span id="theme-toggle-text">Dark Mode</span>
@@ -34,7 +41,10 @@
                     <button id="btn-open-profile" class="btn btn-sm btn-icon" title="Profile Settings">
                         ⚙️ Profile
                     </button>
-                    <button id="btn-export-csv" class="btn btn-sm btn-export" title="Export complete habit report as CSV file">
+                    <button id="btn-export-pdf" class="btn btn-sm btn-export" style="background:#eff6ff; color:#2563eb; border-color:#bfdbfe;" title="Print PDF Summary Report">
+                        📄 Print PDF
+                    </button>
+                    <button id="btn-export-csv" class="btn btn-sm btn-export" title="Export CSV Report">
                         📥 Export CSV
                     </button>
                     <button id="btn-logout" class="btn btn-sm btn-logout" title="Sign out of system">
@@ -47,9 +57,7 @@
 
     <main class="main-container">
 
-        <!-- ========================================== -->
-        <!-- VIEW 1: AUTHENTICATION / LOGIN HOMEPAGE    -->
-        <!-- ========================================== -->
+        <!-- VIEW 1: AUTHENTICATION / LOGIN HOMEPAGE -->
         <section id="auth-view" class="auth-container">
             <div class="auth-card">
                 <div class="auth-header">
@@ -58,16 +66,13 @@
                     <p>Enter your credentials to access your Smart Habit Tracking System workspace.</p>
                 </div>
 
-                <!-- Auth Navigation Tabs -->
                 <div class="auth-tabs">
                     <button class="auth-tab active" id="tab-login">Sign In</button>
                     <button class="auth-tab" id="tab-register">Register New Account</button>
                 </div>
 
-                <!-- Error / Success Alert Box -->
                 <div id="auth-alert" class="auth-alert hidden"></div>
 
-                <!-- LOGIN FORM -->
                 <form id="form-login" class="auth-form">
                     <div class="form-group">
                         <label for="login-email">Email Address</label>
@@ -88,7 +93,6 @@
                     </div>
                 </form>
 
-                <!-- REGISTER FORM -->
                 <form id="form-register" class="auth-form hidden">
                     <div class="form-group">
                         <label for="reg-name">Full Name</label>
@@ -109,10 +113,42 @@
             </div>
         </section>
 
-        <!-- ========================================== -->
-        <!-- VIEW 2: AUTHENTICATED SYSTEM DASHBOARD     -->
-        <!-- ========================================== -->
+        <!-- VIEW 2: AUTHENTICATED SYSTEM DASHBOARD -->
         <div id="dashboard-view" class="dashboard-container hidden">
+
+            <!-- INTERACTIVE REAL AI HABIT ASSISTANT CHATBOT CARD -->
+            <section class="card ai-assistant-card" style="margin-bottom:1.5rem; background: linear-gradient(135deg, #1e1b4b, #312e81); color:#fff; border:none; border-radius: var(--radius-lg); padding:1.5rem;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
+                    <div style="display:flex; align-items:center; gap:0.75rem;">
+                        <span style="font-size:1.8rem;">🤖</span>
+                        <div>
+                            <h3 style="font-size:1.15rem; font-weight:700; color:#fff;">Interactive Real AI Habit Assistant</h3>
+                            <span style="font-size:0.8rem; color:#c7d2fe;">Tell AI to auto-create habits or ask for smart suggestions!</span>
+                        </div>
+                    </div>
+                    <span class="badge-academic" style="background:#4338ca; color:#e0e7ff;">AI Powered</span>
+                </div>
+
+                <!-- Chat Messages History Box -->
+                <div id="ai-chat-box" style="background: rgba(15, 23, 42, 0.6); border: 1px solid #4338ca; border-radius: var(--radius-md); padding: 1rem; max-height: 200px; overflow-y: auto; display:flex; flex-direction:column; gap:0.75rem; margin-bottom:1rem; font-size:0.875rem;">
+                    <div class="ai-msg" style="color:#e0e7ff; line-height:1.4;">
+                        🤖 <strong>AI Assistant</strong>: Hello! I am your AI Habit Assistant. Click any suggestion button below or type a message to auto-create habits!
+                    </div>
+                </div>
+
+                <!-- Quick Prompt Suggestions Chips -->
+                <div style="display:flex; gap:0.5rem; flex-wrap:wrap; margin-bottom:0.75rem;" id="ai-chips-container">
+                    <button type="button" class="ai-chip" data-prompt="Create a habit to read 30 mins every day at 8 PM" style="background:#3730a3; color:#e0e7ff; border:1px solid #6366f1; padding:0.35rem 0.75rem; border-radius:15px; font-size:0.8rem; font-weight:600; cursor:pointer;">💡 Auto-create Reading Habit</button>
+                    <button type="button" class="ai-chip" data-prompt="Create a workout habit for 30 mins" style="background:#3730a3; color:#e0e7ff; border:1px solid #6366f1; padding:0.35rem 0.75rem; border-radius:15px; font-size:0.8rem; font-weight:600; cursor:pointer;">🏋️ Auto-create Workout Habit</button>
+                    <button type="button" class="ai-chip" data-prompt="Suggest computer science habits" style="background:#3730a3; color:#e0e7ff; border:1px solid #6366f1; padding:0.35rem 0.75rem; border-radius:15px; font-size:0.8rem; font-weight:600; cursor:pointer;">🧠 Suggest CS Habits</button>
+                </div>
+
+                <!-- Chat Input Form -->
+                <form id="form-ai-chat" style="display:flex; gap:0.5rem;">
+                    <input type="text" id="ai-chat-input" placeholder="Talk to AI... e.g. 'Create habit for 3L water daily'" style="flex:1; padding:0.65rem 1rem; border-radius:var(--radius-sm); border:1px solid #4338ca; background:#0f172a; color:#fff; font-size:0.9rem; outline:none;" required>
+                    <button type="submit" class="btn btn-primary" style="background:#4f46e5;">Send Prompt →</button>
+                </form>
+            </section>
 
             <!-- Real-time Metrics Section -->
             <section class="metrics-section">
@@ -147,11 +183,11 @@
 
                 <div class="metric-card">
                     <div class="metric-header">
-                        <span class="metric-title">Today's Logs</span>
-                        <span class="metric-icon">✅</span>
+                        <span class="metric-title">Streak Freeze Passes</span>
+                        <span class="metric-icon">🛡️</span>
                     </div>
-                    <div class="metric-value" id="metric-today-count">0/0</div>
-                    <div class="metric-subtext">Completed vs total today</div>
+                    <div class="metric-value" id="metric-freeze-passes">2 <span class="unit">passes</span></div>
+                    <div class="metric-subtext">Protects streak on rest days</div>
                 </div>
             </section>
 
@@ -170,12 +206,50 @@
                     <div class="xp-progress-bar-fill" id="xp-progress-fill" style="width: 0%;"></div>
                 </div>
 
-                <!-- Badges Carousel Grid -->
                 <div class="badges-title">Milestone Achievements</div>
-                <div class="badges-grid" id="badges-container">
-                    <!-- Dynamic badges rendered here -->
-                </div>
+                <div class="badges-grid" id="badges-container"></div>
             </section>
+
+            <!-- POMODORO FOCUS TIMER (WITH CUSTOM TIME SELECTOR) & LEADERBOARD GRID -->
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:1.5rem; margin-bottom:1.5rem;">
+                
+                <!-- Custom Pomodoro Timer Card -->
+                <section class="card pomodoro-card">
+                    <div class="card-header">
+                        <h2>⏱️ Customizable Focus Timer</h2>
+                        <span class="card-hint">Set custom duration (15m, 25m, 45m, 60m...)</span>
+                    </div>
+                    <div style="text-align:center; padding:0.75rem 0;">
+                        <!-- Custom Duration Selector Buttons -->
+                        <div style="display:flex; justify-content:center; gap:0.4rem; margin-bottom:0.75rem; flex-wrap:wrap;">
+                            <button type="button" class="btn-pomo-time btn-icon" data-mins="15">15m</button>
+                            <button type="button" class="btn-pomo-time btn-icon active" data-mins="25" style="background:var(--accent-blue-light); color:var(--accent-blue); font-weight:700;">25m</button>
+                            <button type="button" class="btn-pomo-time btn-icon" data-mins="45">45m</button>
+                            <button type="button" class="btn-pomo-time btn-icon" data-mins="60">60m</button>
+                            <input type="number" id="pomo-custom-input" placeholder="Custom Mins" min="1" max="180" style="width:100px; padding:0.25rem 0.5rem; font-size:0.8rem; border:1px solid var(--border-color); border-radius:4px; text-align:center;">
+                        </div>
+
+                        <div id="pomodoro-timer" style="font-size:3rem; font-weight:800; font-family:monospace; color:var(--accent-blue); margin-bottom:1rem;">25:00</div>
+                        
+                        <div style="display:flex; justify-content:center; gap:0.75rem;">
+                            <button id="btn-pomo-start" class="btn btn-primary">▶ Start Focus</button>
+                            <button id="btn-pomo-pause" class="btn btn-icon">⏸ Pause</button>
+                            <button id="btn-pomo-reset" class="btn btn-icon">🔄 Reset</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Leaderboard Card -->
+                <section class="card leaderboard-card">
+                    <div class="card-header">
+                        <h2>🏆 Friends & XP Leaderboard</h2>
+                        <span class="card-hint">Global User Rankings</span>
+                    </div>
+                    <div id="leaderboard-list" style="display:flex; flex-direction:column; gap:0.5rem; margin-top:0.5rem;">
+                        <div class="empty-state">Loading leaderboard rankings...</div>
+                    </div>
+                </section>
+            </div>
 
             <!-- WEEKLY SUCCESS TREND CHART CARD -->
             <section class="card trend-card">
@@ -183,9 +257,7 @@
                     <h2>Weekly Completion Trend</h2>
                     <span class="card-hint">Daily habit completion rate for past 7 days</span>
                 </div>
-                <div class="trend-bars-container" id="trend-bars-container">
-                    <!-- Dynamic SVG/CSS trend bars rendered here -->
-                </div>
+                <div class="trend-bars-container" id="trend-bars-container"></div>
             </section>
 
             <!-- Full Width Workspace Layout -->
@@ -251,21 +323,13 @@
                                 <h2>Habit Tracking Grid</h2>
                                 <span class="card-hint">Toggle status | Priorities | Sub-tasks | Categories</span>
                             </div>
-                            <!-- Date Navigation Controls for Historical Back Data -->
                             <div class="date-nav-controls">
-                                <button id="btn-prev-week" class="btn btn-sm btn-icon" title="View Older Historical Data">
-                                    ◀ Previous 7 Days
-                                </button>
-                                <button id="btn-today-week" class="btn btn-sm btn-icon" title="Jump to Current Week">
-                                    📅 Current Week
-                                </button>
-                                <button id="btn-next-week" class="btn btn-sm btn-icon" title="View Newer Data">
-                                    Next 7 Days ▶
-                                </button>
+                                <button id="btn-prev-week" class="btn btn-sm btn-icon" title="View Older Historical Data">◀ Previous 7 Days</button>
+                                <button id="btn-today-week" class="btn btn-sm btn-icon" title="Jump to Current Week">📅 Current Week</button>
+                                <button id="btn-next-week" class="btn btn-sm btn-icon" title="View Newer Data">Next 7 Days ▶</button>
                             </div>
                         </div>
 
-                        <!-- Category Filter Pills -->
                         <div class="category-filters" id="category-filters">
                             <button class="cat-pill active" data-category="All">All</button>
                             <button class="cat-pill" data-category="Academic">Academic</button>
@@ -276,7 +340,6 @@
                         </div>
                     </div>
 
-                    <!-- Habit Table / Matrix -->
                     <div class="table-responsive">
                         <table class="habit-table">
                             <thead>
@@ -286,13 +349,10 @@
                                     <th class="col-category">Category</th>
                                     <th class="col-streak">Streaks</th>
                                     <th class="col-action">Action</th>
-                                    <!-- Dynamic Date Columns for past 7 days -->
                                 </tr>
                             </thead>
                             <tbody id="habit-table-body">
-                                <tr>
-                                    <td colspan="12" class="empty-state">Loading habits and progress data...</td>
-                                </tr>
+                                <tr><td colspan="12" class="empty-state">Loading habits and progress data...</td></tr>
                             </tbody>
                         </table>
                     </div>
@@ -302,7 +362,17 @@
         </div>
     </main>
 
-    <!-- User Profile Edit Modal -->
+    <!-- Prominent Action Notification Modal -->
+    <div id="action-modal" class="modal hidden">
+        <div class="modal-content action-modal-content">
+            <div id="action-modal-icon" class="action-modal-icon">✅</div>
+            <h3 id="action-modal-title" class="action-modal-title">Habit Created!</h3>
+            <p id="action-modal-message" class="action-modal-message">Habit was created successfully.</p>
+            <button id="btn-close-action-modal" class="btn btn-primary btn-full">OK, Got It!</button>
+        </div>
+    </div>
+
+    <!-- Profile Edit Modal -->
     <div id="profile-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">

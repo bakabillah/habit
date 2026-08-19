@@ -54,40 +54,23 @@ function initDb() {
  * Helper: Run ALTER TABLE migrations safely on existing tables
  */
 async function runMigrations() {
-    // 1. Add points to users table if missing
-    try {
-        await dbRun("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0");
-    } catch (e) { /* Column already exists */ }
+    // 1. Add points & streak_freezes to users table if missing
+    try { await dbRun("ALTER TABLE users ADD COLUMN points INTEGER DEFAULT 0"); } catch (e) {}
+    try { await dbRun("ALTER TABLE users ADD COLUMN streak_freezes INTEGER DEFAULT 2"); } catch (e) {}
 
-    // 2. Add category to habits table if missing
-    try {
-        await dbRun("ALTER TABLE habits ADD COLUMN category TEXT DEFAULT 'General'");
-    } catch (e) { /* Column already exists */ }
+    // 2. Add category, priority, target_days, subtasks, target_quantity to habits
+    try { await dbRun("ALTER TABLE habits ADD COLUMN category TEXT DEFAULT 'General'"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habits ADD COLUMN priority TEXT DEFAULT 'Medium'"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habits ADD COLUMN target_days TEXT DEFAULT 'All'"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habits ADD COLUMN subtasks TEXT DEFAULT NULL"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habits ADD COLUMN target_quantity INTEGER DEFAULT 1"); } catch (e) {}
 
-    // 3. Add priority to habits table if missing
-    try {
-        await dbRun("ALTER TABLE habits ADD COLUMN priority TEXT DEFAULT 'Medium'");
-    } catch (e) { /* Column already exists */ }
-
-    // 4. Add target_days to habits table if missing
-    try {
-        await dbRun("ALTER TABLE habits ADD COLUMN target_days TEXT DEFAULT 'All'");
-    } catch (e) { /* Column already exists */ }
-
-    // 5. Add subtasks to habits table if missing
-    try {
-        await dbRun("ALTER TABLE habits ADD COLUMN subtasks TEXT DEFAULT NULL");
-    } catch (e) { /* Column already exists */ }
-
-    // 6. Add notes to habit_log table if missing
-    try {
-        await dbRun("ALTER TABLE habit_log ADD COLUMN notes TEXT DEFAULT NULL");
-    } catch (e) { /* Column already exists */ }
+    // 3. Add notes, current_quantity, photo_url to habit_log
+    try { await dbRun("ALTER TABLE habit_log ADD COLUMN notes TEXT DEFAULT NULL"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habit_log ADD COLUMN current_quantity INTEGER DEFAULT 1"); } catch (e) {}
+    try { await dbRun("ALTER TABLE habit_log ADD COLUMN photo_url TEXT DEFAULT NULL"); } catch (e) {}
 }
 
-/**
- * Helper: Query multiple rows (SELECT ...)
- */
 function dbQuery(sql, params = []) {
     return new Promise((resolve, reject) => {
         db.all(sql, params, (err, rows) => {
@@ -97,9 +80,6 @@ function dbQuery(sql, params = []) {
     });
 }
 
-/**
- * Helper: Query single row (SELECT ... LIMIT 1)
- */
 function dbGet(sql, params = []) {
     return new Promise((resolve, reject) => {
         db.get(sql, params, (err, row) => {
@@ -109,9 +89,6 @@ function dbGet(sql, params = []) {
     });
 }
 
-/**
- * Helper: Run INSERT, UPDATE, DELETE statements
- */
 function dbRun(sql, params = []) {
     return new Promise((resolve, reject) => {
         db.run(sql, params, function (err) {
@@ -121,9 +98,6 @@ function dbRun(sql, params = []) {
     });
 }
 
-/**
- * Helper: Raw multi-statement execution
- */
 function dbExec(sql) {
     return new Promise((resolve, reject) => {
         db.exec(sql, (err) => {
